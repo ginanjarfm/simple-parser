@@ -91,7 +91,7 @@ function toHexString() {
       });
     }
   });
-  hexParts.push(avlDataHex.length.toString(16).padStart(8, '0'));
+  hexParts.push((avlDataHex.length * 2).toString(16).padStart(8, '0'));
   hexParts.push(...avlDataHex);
   hexParts.push(numberOfRecords.toString(16).padStart(2, '0'));
   hexParts.push(postfix);
