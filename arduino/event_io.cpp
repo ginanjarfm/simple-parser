@@ -1,22 +1,21 @@
 #include "event_io.h"
 
-const char *prefix = "00000000";
-const char *postfix = "00008612";
-const char *codecId = "7e";
-const int maxIOs = 100;
+String prefix = "00000000";
+String postfix = "00008612";
+String codecId = "7e";
 
 int numberOfRecords = 1;
-std::string eventIOID = "";
+String eventIOID = "";
 
 EventIOMeta eventIOMeta;
-std::vector<EventIO> eventIOs;
+EventIO eventIOs[MAX_EVENTS];
 
 int countIOsByLength(int length)
 {
   int count = 0;
-  for (const auto &eventIO : eventIOs)
+  for (int i = 0; i < eventIOMeta.numberOfTotalID; i++)
   {
-    if (eventIO.ioLength == length)
+    if (eventIOs[i].ioLength == length)
     {
       count++;
     }
@@ -27,9 +26,9 @@ int countIOsByLength(int length)
 int countIOsByLengthX()
 {
   int count = 0;
-  for (const auto &eventIO : eventIOs)
+  for (int i = 0; i < eventIOMeta.numberOfTotalID; i++)
   {
-    if (eventIO.ioLength != 1 && eventIO.ioLength != 2 && eventIO.ioLength != 4 && eventIO.ioLength != 8)
+    if (eventIOs[i].ioLength != 1 && eventIOs[i].ioLength != 2 && eventIOs[i].ioLength != 4 && eventIOs[i].ioLength != 8)
     {
       count++;
     }
@@ -40,20 +39,19 @@ int countIOsByLengthX()
 void insertEventIO(int ioID, int ioValue, int ioLength)
 {
   bool found = false;
-  for (auto &eventIO : eventIOs)
+  for (int i = 0; i < eventIOMeta.numberOfTotalID; i++)
   {
-    if (eventIO.ioID == ioID)
+    if (eventIOs[i].ioID == ioID)
     {
-      eventIO.ioValue = ioValue;
-      eventIO.ioLength = ioLength;
+      eventIOs[i].ioValue = ioValue;
+      eventIOs[i].ioLength = ioLength;
       found = true;
       break;
     }
   }
-  if (!found)
+  if (!found && eventIOMeta.numberOfTotalID < MAX_EVENTS)
   {
-    eventIOs.push_back({ioID, ioValue, ioLength});
-    eventIOMeta.numberOfTotalID++;
+    eventIOs[eventIOMeta.numberOfTotalID++] = {ioID, ioValue, ioLength};
   }
   eventIOMeta.n1OfOneByteIO = countIOsByLength(1);
   eventIOMeta.n2OfTwoBytesIO = countIOsByLength(2);
@@ -62,87 +60,110 @@ void insertEventIO(int ioID, int ioValue, int ioLength)
   eventIOMeta.nXOfXBytesIO = countIOsByLengthX();
 }
 
-std::string toHexString()
+EventIO copyEventIOs(EventIO dest[], const EventIO src[], int count)
 {
-  std::ostringstream hexData;
-  std::ostringstream avlDataHex;
-
-  std::vector<AvlData> avlData;
-
-  AvlData data{
-    std::chrono::system_clock::now(),
-    eventIOID,
-    eventIOMeta,
-    std::vector<EventIO>(eventIOs.begin(), eventIOs.end())
-  };
-
-  avlData.push_back(data);
-
-  for (const auto &avl : avlData)
+  for (int i = 0; i < count; i++)
   {
-    avlDataHex << std::setfill('0') << std::setw(16) << std::hex << avl.getTimestamp();
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOID;
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOMeta.numberOfTotalID;
+    dest[i] = src[i];
+  }
+}
 
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOMeta.n1OfOneByteIO;
-    for (const auto &eventIO : avl.eventIOs)
-    {
-      if (eventIO.ioLength == 1)
-      {
-        avlDataHex << std::setw(4) << std::hex << eventIO.ioID;
-        avlDataHex << std::setw(2) << std::hex << eventIO.ioValue;
-      }
-    }
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOMeta.n2OfTwoBytesIO;
-    for (const auto &eventIO : avl.eventIOs)
-    {
-      if (eventIO.ioLength == 2)
-      {
-        avlDataHex << std::setw(4) << std::hex << eventIO.ioID;
-        avlDataHex << std::setw(4) << std::hex << eventIO.ioValue;
-      }
-    }
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOMeta.n4OfFourBytesIO;
-    for (const auto &eventIO : avl.eventIOs)
-    {
-      if (eventIO.ioLength == 4)
-      {
-        avlDataHex << std::setw(4) << std::hex << eventIO.ioID;
-        avlDataHex << std::setw(8) << std::hex << eventIO.ioValue;
-      }
-    }
-    avlDataHex << std::setfill('0') << std::setw(4) << std::hex << avl.eventIOMeta.n8OfEightBytesIO;
-    for (const auto &eventIO : avl.eventIOs)
-    {
-      if (eventIO.ioLength == 8)
-      {
-        avlDataHex << std::setw(4) << std::hex << eventIO.ioID;
-        avlDataHex << std::setw(16) << std::hex << eventIO.ioValue;
-      }
-    }
-    if (std::string(codecId) == "7e")
-    {
-      avlDataHex << std::setw(4) << std::hex << avl.eventIOMeta.nXOfXBytesIO;
+String toHexStringWithPadding(unsigned long number, int minWidth)
+{
+  String hexString = String(number, HEX);
+  hexString.toLowerCase();
 
-      for (const auto &eventIO : avl.eventIOs)
+  int leadingZeros = minWidth - hexString.length();
+  String result = "";
+
+  for (int i = 0; i < leadingZeros; i++)
+  {
+    result += '0';
+  }
+
+  result += hexString;
+  return result;
+}
+
+String toHexString()
+{
+  String hexData = "";
+  String avlDataHex = "";
+
+  AvlData avlData[MAX_AVL];
+
+  AvlData data;
+  data.timestamp = millis();
+  data.eventIOID = eventIOID;
+  data.eventIOMeta = eventIOMeta;
+  data.eventCount = eventIOMeta.numberOfTotalID;
+  copyEventIOs(data.eventIOs, eventIOs, eventIOMeta.numberOfTotalID);
+
+  avlData[MAX_AVL - 1] = data; // assuming only send 1 data at 1 time
+  for (int i = 0; i < MAX_AVL; i++)
+  {
+    avlDataHex += toHexStringWithPadding(avlData[i].timestamp, 16);
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOID.toInt(), 4);
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.numberOfTotalID, 4);
+
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.n1OfOneByteIO, 4);
+    for (int j = 0; j < avlData[i].eventCount; j++)
+    {
+      if (avlData[i].eventIOs[j].ioLength == 1)
       {
-        if (!(eventIO.ioLength == 1 || eventIO.ioLength == 2 || eventIO.ioLength == 4 || eventIO.ioLength == 8))
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioID, 4);
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioValue, 2);
+      }
+    }
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.n2OfTwoBytesIO, 4);
+    for (int j = 0; j < avlData[i].eventCount; j++)
+    {
+      if (avlData[i].eventIOs[j].ioLength == 2)
+      {
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioID, 4);
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioValue, 4);
+      }
+    }
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.n4OfFourBytesIO, 4);
+    for (int j = 0; j < avlData[i].eventCount; j++)
+    {
+      if (avlData[i].eventIOs[j].ioLength == 4)
+      {
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioID, 4);
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioValue, 8);
+      }
+    }
+    avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.n8OfEightBytesIO, 4);
+    for (int j = 0; j < avlData[i].eventCount; j++)
+    {
+      if (avlData[i].eventIOs[j].ioLength == 8)
+      {
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioID, 4);
+        avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioValue, 16);
+      }
+    }
+    if (codecId == "7e")
+    {
+      avlDataHex += toHexStringWithPadding(avlData[i].eventIOMeta.nXOfXBytesIO, 4);
+      for (int j = 0; j < avlData[i].eventCount; j++)
+      {
+        if (!(avlData[i].eventIOs[j].ioLength == 1 || avlData[i].eventIOs[j].ioLength == 2 || avlData[i].eventIOs[j].ioLength == 4 || avlData[i].eventIOs[j].ioLength == 8))
         {
-          avlDataHex << std::setw(4) << std::hex << eventIO.ioID;
-          avlDataHex << std::setw(4) << std::hex << eventIO.ioLength;
-          avlDataHex << std::setw(eventIO.ioLength * 2) << std::hex << eventIO.ioValue;
+          avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioID, 4);
+          avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioLength, 4);
+          avlDataHex += toHexStringWithPadding(avlData[i].eventIOs[j].ioValue, avlData[i].eventIOs[j].ioLength * 2);
         }
       }
     }
   }
 
-  hexData << prefix;
-  hexData << std::setfill('0') << std::setw(8) << std::hex << avlDataHex.str().length() / 2;
-  hexData << codecId;
-  hexData << std::setfill('0') << std::setw(2) << std::hex << numberOfRecords;
-  hexData << avlDataHex.str();
-  hexData << std::setfill('0') << std::setw(2) << std::hex << numberOfRecords;
-  hexData << postfix;
+  hexData += prefix;
+  hexData += toHexStringWithPadding(avlDataHex.length() / 2, 8);
+  hexData += codecId;
+  hexData += toHexStringWithPadding(numberOfRecords, 2);
+  hexData += avlDataHex;
+  hexData += toHexStringWithPadding(numberOfRecords, 2);
+  hexData += postfix;
 
-  return hexData.str();
+  return hexData;
 }

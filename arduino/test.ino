@@ -1,15 +1,16 @@
 #include "event_io.h"
-#include <Arduino.h>
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  insertEventIO(0x71, 0x01, 1);
-  insertEventIO(0x72, 0x01, 1);
-  insertEventIO(0x73, 0x0002, 2);
-  insertEventIO(0x74, 0x0002, 2);
+  insertEventIO(71, 1, 1);
+  insertEventIO(72, 1, 1);
+  insertEventIO(73, 2, 2);
+  insertEventIO(74, 2, 2);
 }
 
-void loop() {
+void loop()
+{
   String hexString = toHexString();
   Serial.println(hexString);
   delay(1000);

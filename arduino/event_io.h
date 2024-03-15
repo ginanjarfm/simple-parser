@@ -1,18 +1,10 @@
 #ifndef EVENT_IO_H
 #define EVENT_IO_H
 
-#include <string>
-#include <vector>
-#include <iomanip>
-#include <sstream>
-#include <ctime>
+#include <Arduino.h>
 
-extern const char *prefix;
-extern const char *postfix;
-extern const char *codecId;
-extern const int maxIOs;
-
-extern int numberOfRecords;
+#define MAX_EVENTS 100
+#define MAX_AVL 1
 
 struct EventIOMeta
 {
@@ -33,24 +25,22 @@ struct EventIO
 
 struct AvlData
 {
-  std::chrono::system_clock::time_point timestamp;
-  std::string eventIOID;
+  unsigned long timestamp;
+  String eventIOID;
   EventIOMeta eventIOMeta;
-  std::vector<EventIO> eventIOs;
+  EventIO eventIOs[MAX_EVENTS];
 
-  long long getTimestamp() const
-  {
-    auto durationSinceEpoch = timestamp.time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(durationSinceEpoch).count();
-  }
+  int eventCount;
 };
 
 extern EventIOMeta eventIOMeta;
-extern std::vector<EventIO> eventIOs;
+extern EventIO eventIOs[MAX_EVENTS];
 
 int countIOsByLength(int length);
 int countIOsByLengthX();
 void insertEventIO(int ioID, int ioValue, int ioLength = 1);
-std::string toHexString();
+EventIO copyEventIOs(EventIO dest[], const EventIO src[], int count);
+String toHexStringWithPadding(unsigned long number, int minWidth);
+String toHexString();
 
 #endif
