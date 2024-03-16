@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define MAX_EVENTS 100
+#define MAX_EVENTS 70
 #define MAX_AVL 1
 
 struct EventIOMeta
@@ -39,7 +39,7 @@ extern EventIO eventIOs[MAX_EVENTS];
 int countIOsByLength(int length);
 int countIOsByLengthX();
 void insertEventIO(int ioID, int ioValue, int ioLength = 1);
-EventIO copyEventIOs(EventIO dest[], const EventIO src[], int count);
+void copyEventIOs(EventIO dest[], const EventIO src[], int count);
 String toHexStringWithPadding(unsigned long number, int minWidth);
 String toHexString();
 

@@ -60,7 +60,7 @@ void insertEventIO(int ioID, int ioValue, int ioLength)
   eventIOMeta.nXOfXBytesIO = countIOsByLengthX();
 }
 
-EventIO copyEventIOs(EventIO dest[], const EventIO src[], int count)
+void copyEventIOs(EventIO dest[], const EventIO src[], int count)
 {
   for (int i = 0; i < count; i++)
   {
@@ -92,14 +92,12 @@ String toHexString()
 
   AvlData avlData[MAX_AVL];
 
-  AvlData data;
-  data.timestamp = millis();
-  data.eventIOID = eventIOID;
-  data.eventIOMeta = eventIOMeta;
-  data.eventCount = eventIOMeta.numberOfTotalID;
-  copyEventIOs(data.eventIOs, eventIOs, eventIOMeta.numberOfTotalID);
+  avlData[0].timestamp = millis();
+  avlData[0].eventIOID = eventIOID;
+  avlData[0].eventIOMeta = eventIOMeta;
+  avlData[0].eventCount = eventIOMeta.numberOfTotalID;
+  copyEventIOs(avlData[0].eventIOs, eventIOs, eventIOMeta.numberOfTotalID);
 
-  avlData[MAX_AVL - 1] = data; // assuming only send 1 data at 1 time
   for (int i = 0; i < MAX_AVL; i++)
   {
     avlDataHex += toHexStringWithPadding(avlData[i].timestamp, 16);
